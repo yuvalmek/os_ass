@@ -344,10 +344,17 @@ reparent(struct proc *p)
 // An exited process remains in the zombie state
 // until its parent calls wait().
 void
-exit(int status)
+exit(int status, char *exit_msg)
 {
   struct proc *p = myproc();
 
+  //use argstr() to copy the exit message from user space to kernel space, if the proccess passess 0 as the string adress, the exit message will be the constant "No exit message"
+  if(exit_msg != 0)
+    argaddr(1, &exit_msg);
+  else
+    argaddr("No exit message", &exit_msg);
+
+  
   if(p == initproc)
     panic("init exiting");
 
@@ -387,15 +394,15 @@ exit(int status)
 
 // Wait for a child process to exit and return its pid.
 // Return -1 if this process has no children.
+
 int
-wait(uint64 addr)
+wait(uint64 addr, uint64 msg_ptr)
 {
   struct proc *pp;
   int havekids, pid;
   struct proc *p = myproc();
 
   acquire(&wait_lock);
-
   for(;;){
     // Scan through table looking for exited children.
     havekids = 0;
@@ -403,7 +410,6 @@ wait(uint64 addr)
       if(pp->parent == p){
         // make sure the child isn't still in exit() or swtch().
         acquire(&pp->lock);
-
         havekids = 1;
         if(pp->state == ZOMBIE){
           // Found one.
@@ -414,6 +420,14 @@ wait(uint64 addr)
             release(&wait_lock);
             return -1;
           }
+
+          if(msg_ptr != 0 && copyout(p->pagetable, msg_ptr, pp->exit_msg,
+                                  sizeof(pp->exit_msg)) < 0) {
+            release(&pp->lock);
+            release(&wait_lock);
+            return -1;
+          }
+          
           freeproc(pp);
           release(&pp->lock);
           release(&wait_lock);
