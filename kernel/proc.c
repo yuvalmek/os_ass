@@ -347,13 +347,6 @@ void
 exit(int status, char *exit_msg)
 {
   struct proc *p = myproc();
-
-  //use argstr() to copy the exit message from user space to kernel space, if the proccess passess 0 as the string adress, the exit message will be the constant "No exit message"
-  if(exit_msg != 0)
-    argaddr(1, &exit_msg);
-  else
-    argaddr("No exit message", &exit_msg);
-
   
   if(p == initproc)
     panic("init exiting");
@@ -383,6 +376,14 @@ exit(int status, char *exit_msg)
   acquire(&p->lock);
 
   p->xstate = status;
+
+  if(exit_msg == 0) {
+    char *default_msg = "No exit message";
+    strncpy(p->exit_msg, default_msg, sizeof(p->exit_msg));
+  } else {
+    strncpy(p->exit_msg, exit_msg, sizeof(p->exit_msg));
+  }
+  
   p->state = ZOMBIE;
 
   release(&wait_lock);

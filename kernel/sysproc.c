@@ -11,7 +11,19 @@ sys_exit(void)
 {
   int n;
   argint(0, &n);
-  exit(n,"");
+
+  uint64 exit_msg_addr;
+  argaddr(1, &exit_msg_addr);
+
+  if(exit_msg_addr == 0){
+    exit(n,0);
+  } 
+  else {
+    char exit_msg[32];
+    fetchstr(exit_msg_addr, exit_msg, 32);
+    exit(n,exit_msg);
+  }
+
   return 0;  // not reached
 }
 
