@@ -481,6 +481,18 @@ scheduler(void)
         // before jumping back to us.
         p->state = RUNNING;
         c->proc = p;
+        int cpu_id = cpuid();
+        if((p->affinity_mask & (1 << cpu_id)) == 0) {
+          if(p->affinity_mask == 0) {
+            // This process can run on any CPU
+            //call the set_affinity_mask() function
+          } else {
+            // This process is not allowed to run on this CPU
+            release(&p->lock);
+            continue;
+          }
+        }
+        printf("Process %d can run on cpu number: %d\n", p->pid, cpu_id);
         swtch(&c->context, &p->context);
 
         // Process is done running for now.
@@ -701,4 +713,11 @@ procdump(void)
     printf("%d %s %s", p->pid, state, p->name);
     printf("\n");
   }
+}
+
+// Set the affinity mask for the current process
+int set_affinity_mask(int mask) {
+  struct proc *p = myproc();
+  p->affinity_mask = mask;
+  return 0;
 }

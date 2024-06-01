@@ -110,3 +110,12 @@ sys_memsize(void)
 {
   return myproc()->sz;
 }
+
+//task 5.7 , set the affinity mask of the process.
+uint64 
+sys_set_affinity_mask(void)
+{
+  int mask;
+  argint(0, &mask);
+  return set_affinity_mask(mask);
+}
