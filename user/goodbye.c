@@ -5,6 +5,6 @@
 
 int main(void)
 {
-  fprintf(1, "Goodbye World xv6\n");
-  exit(0,0);
+  exit(0,"Goodbye World xv6\n");
+  return 0;
 }
