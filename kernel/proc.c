@@ -510,7 +510,17 @@ void scheduler(void)
         {
           if ((p->effective_affinity_mask & (1 << cpu_id)) == 1)
           {
-            int effective_after_xor = p->effective_affinity_mask ^ (1 << cpu_id);
+            int effective_after_xor;
+            if (p->effective_affinity_mask == p->affinity_mask)
+            {
+              // if more than 1 CPU is allowed
+              effective_after_xor = p->effective_affinity_mask ^ (1 << cpu_id);
+            }
+            else
+            {
+              // if only 1 CPU is allowed
+              effective_after_xor = p->effective_affinity_mask ^ p->affinity_mask;
+            }
             if (effective_after_xor == 0)
             {
               p->effective_affinity_mask = p->affinity_mask;
