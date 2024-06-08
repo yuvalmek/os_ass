@@ -498,43 +498,35 @@ void scheduler(void)
     for (p = proc; p < &proc[NPROC]; p++)
     {
       acquire(&p->lock);
-      if (p->state == RUNNABLE)
+      int cpu_id = cpuid();
+      int cpu_allowed = (p->affinity_mask == 0) || (p->effective_affinity_mask & (1 << cpu_id));
+      if (p->state == RUNNABLE && cpu_allowed)
       {
         // Switch to chosen process.  It is the process's job
         // to release its lock and then reacquire it
         // before jumping back to us.
         p->state = RUNNING;
         c->proc = p;
-        int cpu_id = cpuid();
         if (p->affinity_mask != 0)
         {
-          if ((p->effective_affinity_mask & (1 << cpu_id)) == 1)
+          int effective_after_xor;
+          if (p->effective_affinity_mask == p->affinity_mask)
           {
-            int effective_after_xor;
-            if (p->effective_affinity_mask == p->affinity_mask)
-            {
-              // if more than 1 CPU is allowed
-              effective_after_xor = p->effective_affinity_mask ^ (1 << cpu_id);
-            }
-            else
-            {
-              // if only 1 CPU is allowed
-              effective_after_xor = p->effective_affinity_mask ^ p->affinity_mask;
-            }
-            if (effective_after_xor == 0)
-            {
-              p->effective_affinity_mask = p->affinity_mask;
-            }
-            else
-            {
-              p->effective_affinity_mask = effective_after_xor;
-            }
+            // if more than 1 CPU is allowed
+            effective_after_xor = p->effective_affinity_mask ^ (1 << cpu_id);
           }
           else
           {
-            // This process is not allowed to run on this CPU
-            release(&p->lock);
-            continue;
+            // if only 1 CPU is allowed
+            effective_after_xor = p->effective_affinity_mask ^ p->affinity_mask;
+          }
+          if (effective_after_xor == 0)
+          {
+            p->effective_affinity_mask = p->affinity_mask;
+          }
+          else
+          {
+            p->effective_affinity_mask = effective_after_xor;
           }
         }
         printf("Process %d runs on cpu number: %d\n", p->pid, cpu_id);
