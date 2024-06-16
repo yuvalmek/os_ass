@@ -4,14 +4,12 @@
 
 int main(void)
 {
-   int x = 0;
    // make the process run on CPUs 0 and 2 only
-   set_affinity_mask(0b000000101);
-   printf("start of test \n");
+   set_affinity_mask(5);
+   printf("start of test");
    for (;;)
    {
-      x++;
-      sleep(5000);
+      printf("%d", getpid());
    }
    return 0;
 }

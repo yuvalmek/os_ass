@@ -488,6 +488,8 @@ void scheduler(void)
 {
   struct proc *p;
   struct cpu *c = mycpu();
+  int cpu_id = cpuid();
+
   c->proc = 0;
 
   static int last_cpu = 0;
@@ -499,35 +501,30 @@ void scheduler(void)
     for (p = proc; p < &proc[NPROC]; p++)
     {
       acquire(&p->lock);
-      if (p->state == RUNNABLE)
+      int cpu_allowed = (p->affinity_mask == 0) || (p->effective_affinity_mask & (1 << cpu_id));
+      if (p->state == RUNNABLE && cpu_allowed)
       {
-
-        // If the last CPU was 0, set the effective_affinity_mask to allow the process to run on CPU 2
-        // If the last CPU was 2, set the effective_affinity_mask to allow the process to run on CPU 0
-        p->effective_affinity_mask = (last_cpu == 0) ? 0b100 : 0b001;
-
-        if (p->effective_affinity_mask == 0)
-        {
-          p->effective_affinity_mask = p->affinity_mask;
-        }
-
-        int cpu_id = cpuid();
         if (p->affinity_mask != 0)
         {
-          if ((p->effective_affinity_mask & (1 << cpu_id)) == 0)
+          int effective_after_change;
+          effective_after_change = p->effective_affinity_mask & ~(1 << cpu_id);
+
+          if (effective_after_change == 0)
           {
-            // This process is not allowed to run on this CPU
-            release(&p->lock);
-            continue;
+            p->effective_affinity_mask = p->affinity_mask;
+          }
+          else
+          {
+            p->effective_affinity_mask = effective_after_change;
           }
         }
 
-        // Update last_cpu to the current CPU
-        last_cpu = cpu_id;
-
+        // Switch to chosen process.  It is the process's job
+        // to release its lock and then reacquire it
+        // before jumping back to us.
+        printf("Process %d runs on cpu number: %d\n", p->pid, cpu_id);
         p->state = RUNNING;
         c->proc = p;
-        printf("Process %d runs on cpu number: %d\n", p->pid, cpu_id);
         swtch(&c->context, &p->context);
 
         // Process is done running for now.
